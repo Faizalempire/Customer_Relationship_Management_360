@@ -41,7 +41,28 @@ const customerSchema = new mongoose.Schema(
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      default: null,
     },
+
+    // 👇 Paste it here
+    activityHistory: [
+      {
+        action: {
+          type: String,
+          required: true,
+        },
+
+        performedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

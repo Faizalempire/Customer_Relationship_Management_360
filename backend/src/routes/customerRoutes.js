@@ -10,6 +10,8 @@ const {
     getCustomerById,
     updateCustomer,
     deleteCustomer,
+    assignCustomer,
+    getCustomerHistory,
 } = require("../controllers/customerController");
 
 // Get All Customers
@@ -48,6 +50,22 @@ router.delete(
   protect,
   authorize("admin"),
   deleteCustomer
+);
+
+// Assign Customer to Sales Executive
+router.put(
+  "/:id/assign",
+  protect,
+  authorize("admin", "sales_manager"),
+  assignCustomer
+);
+
+// Customer Activity History
+router.get(
+    "/:id/history",
+    protect,
+    authorize("admin", "sales_manager", "sales_executive"),
+    getCustomerHistory
 );
 
 module.exports = router;
