@@ -1,0 +1,87 @@
+{
+  "theme": "Dark",
+  "archetype": "5 (Luxury) & 4 (Swiss & High-Contrast)",
+  "brand": {
+    "name": "CRM360",
+    "primary_color": "#10B981"
+  },
+  "colors": {
+    "background_base": "#0A0A0B",
+    "surface_card": "#121214",
+    "surface_glass": "bg-black/60 backdrop-blur-xl",
+    "primary": "#10B981",
+    "primary_hover": "#059669",
+    "secondary": "#27272A",
+    "text_primary": "#FAFAFA",
+    "text_secondary": "#A1A1AA",
+    "border": "#27272A",
+    "border_glass": "border-white/10",
+    "success": "#10B981",
+    "warning": "#F59E0B",
+    "danger": "#EF4444"
+  },
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Manrope",
+    "h1": "text-5xl sm:text-6xl font-bold tracking-tight",
+    "h2": "text-3xl sm:text-4xl font-semibold tracking-tight",
+    "h3": "text-xl sm:text-2xl font-medium",
+    "body": "text-base text-zinc-400 leading-relaxed",
+    "label": "text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500"
+  },
+  "spacing_and_layout": {
+    "marketing_page": "Generous spacing (py-24 to py-32), 'Tetris' grid layout, high asymmetry.",
+    "dashboard": "'Control Room' Grid layout. Dense padding (p-6) inside cards. Direct grid children for widgets.",
+    "border_radius": "rounded-xl for cards, rounded-lg for buttons/inputs."
+  },
+  "surfaces_and_micro_themes": {
+    "marketing_hero_overlay": "bg-gradient-to-r from-black/80 via-black/50 to-transparent",
+    "dashboard_cards": "Flat background with 1px border-white/5, subtle shadow, hover:shadow-lg hover:-translate-y-1 transition-all duration-300",
+    "navigation_bar": "Sticky header with crystal glassmorphism: bg-black/60 backdrop-blur-2xl border-b border-white/10"
+  },
+  "components": {
+    "buttons": "bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]",
+    "inputs": "bg-zinc-900 border-zinc-800 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500",
+    "kanban_board": "Columns with bg-zinc-900/30 border border-white/5. Draggable cards with solid background",
+    "tables": "shadcn/ui table. Hover effects on rows. Text-zinc-300."
+  },
+  "motion_and_interactions": {
+    "hover_states": "Buttons and cards MUST have distinct hover states (lighter backgrounds or slight translateY).",
+    "transitions": "Use 'transition-all duration-300 ease-out'.",
+    "micro_interactions": "Framer motion for page transitions and card staggering."
+  },
+  "icons_library": "lucide-react",
+  "media": {
+    "hero_background": {
+      "url": "https://images.pexels.com/photos/4863013/pexels-photo-4863013.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Abstract dark green texture to be used as a subtle background element in hero sections, with high opacity overlay."
+    },
+    "professionals_working": {
+      "url": "https://images.pexels.com/photos/36713443/pexels-photo-36713443.jpeg",
+      "description": "Nighttime office meeting for marketing page 'Teams' feature section."
+    },
+    "feature_image": {
+      "url": "https://images.pexels.com/photos/36713440/pexels-photo-36713440.jpeg",
+      "description": "Professionals focused on tasks. Used in SaaS product features representation."
+    },
+    "sponsor_logos": [
+      "https://images.unsplash.com/photo-1772760110621-d7b6f54c1e42?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1NzZ8MHwxfHNlYXJjaHwyfHxjb21wYW55JTIwbG9nbyUyMG1vZGVybnxlbnwwfHx8fDE3ODMyMzI4ODR8MA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1769984867572-10dea95bd4f1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1NzZ8MHwxfHNlYXJjaHwxfHxjb21wYW55JTIwbG9nbyUyMG1vZGVybnxlbnwwfHx8fDE3ODMyMzI4ODR8MA&ixlib=rb-4.1.0&q=85"
+    ]
+  },
+  "accessibility_and_testing": {
+    "data_testid": "MANDATORY on all interactive elements (e.g. data-testid='login-submit-btn').",
+    "contrast": "Text must meet APCA contrast over dark backgrounds."
+  },
+  "instructions_to_main_agent": [
+    "Build standard React application (.js/.jsx) with Tailwind CSS.",
+    "Implement mock data context/localStorage for auth, distinguishing Admin, Sales Manager, Sales Executive.",
+    "Create marketing page at root `/`.",
+    "Create auth pages at `/login` and `/signup`.",
+    "Create dashboards inside `/dashboard/*` with role-based routing.",
+    "Ensure dark mode is default and prominent. Use the exact Emerald green (#10B981) for primary actions.",
+    "Include Kanban board, charts (recharts/shadcn), and dense data tables.",
+    "Use framer-motion for smooth entrance and tab transitions.",
+    "Import Google Fonts 'Outfit' and 'Manrope' in your HTML/CSS."
+  ]
+}
