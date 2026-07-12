@@ -1,21 +1,33 @@
-import React, { useState } from "react";
-import { getDB, saveDB, generateId } from "../lib/mockData";
+import React, { useState, useEffect } from "react";
+import {
+  getLeads,
+  createLead,
+  updateLead,
+  deleteLead,
+} from "../api/leadApi";
 import { useAuth } from "../lib/auth";
 import { Card, SectionTitle, StatusPill, currency } from "../components/UIKit";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "../components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Plus, Search, Trash2, Edit, Repeat2, UserPlus } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Repeat2 } from "lucide-react";
 import { toast } from "sonner";
+import { createCustomer } from "../api/customerApi";
+import { getSalesExecutives } from "../api/userApi";
+
 
 export default function Leads() {
   const { user } = useAuth();
-  const [db, setDB] = useState(getDB());
+  const [db, setDB] = useState({
+    leads: [],
+    users: [],
+    stages: ["New", "Qualified", "Proposal", "Won", "Lost"],
+  });
   const [q, setQ] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [open, setOpen] = useState(false);
@@ -23,55 +35,157 @@ export default function Leads() {
   const [form, setForm] = useState({ name: "", contact: "", email: "", phone: "", source: "Website", value: 0, stage: "New", assignedTo: "", priority: "medium", notes: "" });
   const [deleteId, setDeleteId] = useState(null);
 
-  const refresh = () => setDB({ ...getDB() });
+  const fetchLeads = async () => {
+    try {
+      const leads = await getLeads();
+
+      setDB((prev) => ({
+        ...prev,
+        leads,
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load leads");
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const users = await getSalesExecutives();
+
+      setDB((prev) => ({
+        ...prev,
+        users,
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load sales executives");
+    }
+  };
 
   const visible = db.leads
-    .filter(l => user.role === "executive" ? l.assignedTo === user.id : true)
+    .filter(
+      l =>
+        user.role === "sales_executive"
+          ? (l.assignedTo?._id || l.assignedTo) === user.id
+          : true
+    )
     .filter(l => stageFilter === "all" || l.stage === stageFilter)
     .filter(l => !q || l.name.toLowerCase().includes(q.toLowerCase()) || l.contact.toLowerCase().includes(q.toLowerCase()));
 
-  const canWrite = ["admin", "manager"].includes(user.role) || user.role === "executive";
+  const canWrite = ["admin", "sales_manager"].includes(user.role) || user.role === "sales_executive";
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", contact: "", email: "", phone: "", source: "Website", value: 0, stage: "New", assignedTo: user.role === "executive" ? user.id : "", priority: "medium", notes: "" });
+    setForm({ name: "", contact: "", email: "", phone: "", source: "Website", value: 0, stage: "New", assignedTo: user.role === "sales_executive" ? user.id : "", priority: "medium", notes: "" });
     setOpen(true);
   };
-  const openEdit = (l) => { setEditing(l); setForm({ ...l }); setOpen(true); };
-  const save = () => {
-    if (!form.name || !form.contact) return toast.error("Name & contact are required");
-    const cur = getDB();
-    if (editing) {
-      cur.leads = cur.leads.map(x => x.id === editing.id ? { ...x, ...form } : x);
-      cur.activity.unshift({ id: generateId("a"), userId: user.id, action: "updated", entity: "lead", entityId: editing.id, description: `Updated lead '${form.name}'`, timestamp: new Date().toISOString() });
-      toast.success("Lead updated");
-    } else {
-      const id = generateId("l");
-      cur.leads.unshift({ id, ...form, value: Number(form.value), created: new Date().toISOString().slice(0, 10) });
-      cur.activity.unshift({ id: generateId("a"), userId: user.id, action: "created", entity: "lead", entityId: id, description: `Created lead '${form.name}'`, timestamp: new Date().toISOString() });
-      toast.success("Lead created");
+  const openEdit = (lead) => {
+    setEditing(lead);
+
+    setForm({
+      name: lead.name || "",
+      contact: lead.contact || "",
+      email: lead.email || "",
+      phone: lead.phone || "",
+      source: lead.source || "Website",
+      value: lead.value || 0,
+      stage: lead.stage || "New",
+      assignedTo: lead.assignedTo?._id || lead.assignedTo || "",
+      priority: lead.priority || "medium",
+      notes: lead.notes || "",
+    });
+
+    setOpen(true);
+  };
+  const save = async () => {
+    if (!form.name || !form.contact) {
+      return toast.error("Name & Contact are required");
     }
-    saveDB(cur);
-    refresh();
-    setOpen(false);
+
+    try {
+      if (editing) {
+        // Update existing lead
+        await updateLead(editing._id, form);
+        toast.success("Lead updated successfully");
+      } else {
+        // Create new lead
+        await createLead(form);
+        toast.success("Lead created successfully");
+      }
+
+      fetchLeads();     // Reload data
+      setOpen(false);   // Close dialog
+
+      // Reset form
+      setForm({
+        name: "",
+        contact: "",
+        email: "",
+        phone: "",
+        source: "Website",
+        value: 0,
+        stage: "New",
+        assignedTo: "",
+        priority: "medium",
+        notes: "",
+      });
+
+      setEditing(null);
+
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Operation failed");
+    }
   };
-  const confirmDelete = () => {
-    const id = deleteId;
-    if (!id) return;
-    const cur = getDB();
-    cur.leads = cur.leads.filter(l => l.id !== id);
-    cur.activity.unshift({ id: generateId("a"), userId: user.id, action: "deleted", entity: "lead", entityId: id, description: `Deleted lead`, timestamp: new Date().toISOString() });
-    saveDB(cur); refresh();
-    setDeleteId(null);
-    toast.success("Lead deleted");
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      await deleteLead(deleteId);
+
+      toast.success("Lead deleted successfully");
+
+      fetchLeads();      // Refresh the table
+      setDeleteId(null); // Close the delete dialog
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to delete lead");
+    }
   };
-  const convert = (l) => {
-    const cur = getDB();
-    cur.customers.unshift({ id: generateId("c"), name: l.name, contact: l.contact, email: l.email, phone: l.phone, value: l.value, status: "active", assignedTo: l.assignedTo, tags: ["Converted"], notes: l.notes, created: new Date().toISOString().slice(0, 10) });
-    cur.leads = cur.leads.map(x => x.id === l.id ? { ...x, stage: "Won" } : x);
-    cur.activity.unshift({ id: generateId("a"), userId: user.id, action: "converted", entity: "lead", entityId: l.id, description: `Converted lead '${l.name}' to customer`, timestamp: new Date().toISOString() });
-    saveDB(cur); refresh();
-    toast.success("Lead converted to customer");
+  const convert = async (lead) => {
+    try {
+      // Create customer from lead
+      await createCustomer({
+        customerName: lead.contact,
+        company: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        status: "Won",
+        assignedTo: lead.assignedTo?._id || lead.assignedTo,
+      });
+
+      // Update lead stage to Won
+      await updateLead(lead._id, {
+        ...lead,
+        stage: "Won",
+      });
+
+      toast.success("Lead converted to customer");
+
+      await fetchLeads();
+
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err.response?.data?.message || "Failed to convert lead"
+      );
+    }
   };
 
   return (
@@ -112,20 +226,20 @@ export default function Leads() {
           </TableHeader>
           <TableBody>
             {visible.map(l => (
-              <TableRow key={l.id} className="border-white/5 hover:bg-white/[0.02]" data-testid={`lead-row-${l.id}`}>
+              <TableRow key={l._id} className="border-white/5 hover:bg-white/[0.02]" data-testid={`lead-row-${l._id}`}>
                 <TableCell className="font-medium">{l.name}</TableCell>
                 <TableCell><div>{l.contact}</div><div className="text-xs text-zinc-500">{l.email}</div></TableCell>
                 <TableCell><StatusPill status={l.stage} /></TableCell>
                 <TableCell className="font-semibold text-emerald-400">{currency(l.value)}</TableCell>
-                <TableCell className="text-sm text-zinc-400">{db.users.find(u => u.id === l.assignedTo)?.name || "—"}</TableCell>
+                <TableCell className="text-sm text-zinc-400">{l.assignedTo?.fullName || "—"}</TableCell>
                 <TableCell><StatusPill status={l.priority} /></TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     {l.stage !== "Won" && l.stage !== "Lost" && (
-                      <Button size="icon" variant="ghost" onClick={() => convert(l)} className="h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-400" title="Convert to customer" data-testid={`convert-lead-${l.id}`}><Repeat2 className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => convert(l)} className="h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-400" title="Convert to customer" data-testid={`convert-lead-${l._id}`}><Repeat2 className="h-4 w-4" /></Button>
                     )}
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(l)} className="h-8 w-8 hover:bg-white/5" data-testid={`edit-lead-${l.id}`}><Edit className="h-4 w-4" /></Button>
-                    {["admin", "manager"].includes(user.role) && <Button size="icon" variant="ghost" onClick={() => setDeleteId(l.id)} className="h-8 w-8 hover:bg-red-500/10 hover:text-red-400" data-testid={`delete-lead-${l.id}`}><Trash2 className="h-4 w-4" /></Button>}
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(l)} className="h-8 w-8 hover:bg-white/5" data-testid={`edit-lead-${l._id}`}><Edit className="h-4 w-4" /></Button>
+                    {["admin", "sales_manager"].includes(user.role) && <Button size="icon" variant="ghost" onClick={() => setDeleteId(l._id)} className="h-8 w-8 hover:bg-red-500/10 hover:text-red-400" data-testid={`delete-lead-${l._id}`}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
                 </TableCell>
               </TableRow>
@@ -162,11 +276,19 @@ export default function Leads() {
                 <SelectContent className="bg-[#121214] border-white/10 text-white">{["Website", "Referral", "Cold Email", "LinkedIn", "Event"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {["admin", "manager"].includes(user.role) && (
+            {["admin", "sales_manager"].includes(user.role) && (
               <div className="col-span-2"><Label className="text-zinc-400 text-xs">Assign to</Label>
                 <Select value={form.assignedTo} onValueChange={v => setForm({ ...form, assignedTo: v })}>
                   <SelectTrigger className="bg-zinc-900 border-zinc-800 mt-1"><SelectValue placeholder="Select user" /></SelectTrigger>
-                  <SelectContent className="bg-[#121214] border-white/10 text-white">{db.users.filter(u => u.role === "executive").map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
+                  <SelectContent className="bg-[#121214] border-white/10 text-white">
+                    {db.users
+                      .filter((u) => u.role === "sales_executive")
+                      .map((u) => (
+                        <SelectItem key={u._id} value={u._id}>
+                          {u.fullName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
                 </Select>
               </div>
             )}

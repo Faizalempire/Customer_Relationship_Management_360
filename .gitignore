@@ -87,3 +87,16 @@ credentials.json
 *.key
 .credentials
 frontend/node_modules/.cache/default-development/7.pack
+
+# CRM360 specific generated files
+.emergent/
+memory/
+test_reports/
+test-reports/
+test_result.md
+
+# Frontend environment
+frontend/.env
+
+# Backend environment
+backend/.env

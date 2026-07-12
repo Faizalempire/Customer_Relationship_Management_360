@@ -11,22 +11,22 @@ import { ArrowRight, Loader2, Crown, UserCog, User } from "lucide-react";
 
 const roles = [
   { id: "admin", label: "Admin", desc: "Full system control", icon: Crown },
-  { id: "manager", label: "Sales Manager", desc: "Coach the team", icon: UserCog },
-  { id: "executive", label: "Sales Executive", desc: "Close deals", icon: User },
+  { id: "sales_manager", label: "Sales Manager", desc: "Coach the team", icon: UserCog },
+  { id: "sales_executive", label: "Sales Executive", desc: "Close deals", icon: User },
 ];
 
 export default function Signup() {
   const { signup } = useAuth();
   const nav = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "executive" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "sales_executive" });
   const [loading, setLoading] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (form.password.length < 6) return toast.error("Password must be at least 6 characters");
     setLoading(true);
-    setTimeout(() => {
-      const res = signup(form);
+    setTimeout(async () => {
+      const res = await signup(form);
       setLoading(false);
       if (!res.ok) return toast.error(res.error);
       toast.success(`Welcome to CRM360, ${res.user.name.split(" ")[0]}!`);

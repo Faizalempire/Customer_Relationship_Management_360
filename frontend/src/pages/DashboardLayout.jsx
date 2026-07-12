@@ -24,7 +24,7 @@ const menuByRole = {
     { to: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
     { to: "/dashboard/profile", label: "Profile", icon: UserIcon },
   ],
-  manager: [
+  sales_manager: [
     { to: "/dashboard", label: "Dashboard", icon: Home, end: true },
     { to: "/dashboard/leads", label: "Leads", icon: Target },
     { to: "/dashboard/customers", label: "Customers", icon: UsersRound },
@@ -36,7 +36,7 @@ const menuByRole = {
     { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
     { to: "/dashboard/profile", label: "Profile", icon: UserIcon },
   ],
-  executive: [
+  sales_executive: [
     { to: "/dashboard", label: "Dashboard", icon: Home, end: true },
     { to: "/dashboard/leads", label: "Leads", icon: Target },
     { to: "/dashboard/customers", label: "Customers", icon: UsersRound },
@@ -68,7 +68,7 @@ export default function DashboardLayout() {
         </div>
         <div className="px-3 pb-2">
           <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 px-3 mb-2">
-            {user?.role === "admin" ? "Administrator" : user?.role === "manager" ? "Manager" : "Executive"}
+            {user?.role === "admin" ? "Administrator" : user?.role === "sales_manager" ? "Sales Manager" : "Sales Executive"}
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 space-y-1">

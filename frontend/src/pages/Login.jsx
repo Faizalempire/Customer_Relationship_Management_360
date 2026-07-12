@@ -15,19 +15,29 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
-    setTimeout(() => {
-      const res = login(email, password);
+
+    try {
+      const res = await login(email, password);
+
       setLoading(false);
-      if (!res.ok) return toast.error(res.error);
+
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+
       toast.success(`Welcome back, ${res.user.name.split(" ")[0]}`);
       nav("/dashboard");
-    }, 400);
-  };
 
+    } catch (err) {
+      setLoading(false);
+      toast.error("Something went wrong.");
+    }
+  };
   const demo = (email, password) => { setEmail(email); setPassword(password); };
 
   return (

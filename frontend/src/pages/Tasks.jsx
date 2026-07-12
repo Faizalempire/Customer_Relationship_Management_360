@@ -1,5 +1,12 @@
-import React, { useState } from "react";
-import { getDB, saveDB, generateId } from "../lib/mockData";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+} from "../api/taskApi";
+
+import { getSalesExecutives } from "../api/userApi";
 import { useAuth } from "../lib/auth";
 import { Card, SectionTitle, StatusPill } from "../components/UIKit";
 import { Button } from "../components/ui/button";
@@ -13,37 +20,97 @@ import { toast } from "sonner";
 
 export default function Tasks() {
   const { user } = useAuth();
-  const [db, setDB] = useState(getDB());
+  const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
   const [tab, setTab] = useState("all");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", assignedTo: "", dueDate: "", priority: "medium", status: "pending" });
-  const refresh = () => setDB({ ...getDB() });
+  const [form, setForm] = useState({ title: "", description: "", assignedTo: "", dueDate: "", priority: "Medium", status: "Pending" });
 
-  const visible = db.tasks
-    .filter(t => user.role === "executive" ? t.assignedTo === user.id : true)
+  const fetchTasks = useCallback(async () => {
+    try {
+      const data = await getTasks();
+      setTasks(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load tasks");
+    }
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const data = await getSalesExecutives();
+      setUsers(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    fetchUsers();
+  }, [fetchTasks]);
+
+  const visible = tasks
+    .filter(t =>
+      user.role === "sales_executive"
+        ? (t.assignedTo?._id || t.assignedTo) === (user._id || user.id)
+        : true
+    )
     .filter(t => tab === "all" || t.status === tab);
 
-  const canAssign = ["admin", "manager"].includes(user.role);
+  const canAssign = ["admin", "sales_manager"].includes(user.role);
+  const create = async () => {
+    if (!form.title) {
+      return toast.error("Title required");
+    }
 
-  const create = () => {
-    if (!form.title) return toast.error("Title required");
-    const cur = getDB();
-    cur.tasks.unshift({ id: generateId("t"), ...form, assignedBy: user.id, relatedTo: null });
-    cur.activity.unshift({ id: generateId("a"), userId: user.id, action: "created", entity: "task", entityId: "t", description: `Created task '${form.title}'`, timestamp: new Date().toISOString() });
-    saveDB(cur); refresh(); setOpen(false);
-    setForm({ title: "", description: "", assignedTo: "", dueDate: "", priority: "medium", status: "pending" });
-    toast.success("Task created");
+    try {
+      await createTask(form);
+
+      toast.success("Task created");
+
+      fetchTasks();
+
+      setOpen(false);
+
+      setForm({
+        title: "",
+        description: "",
+        assignedTo: "",
+        dueDate: "",
+        priority: "Medium",
+        status: "Pending",
+      });
+
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to create task");
+    }
   };
-  const complete = (id) => {
-    const cur = getDB();
-    cur.tasks = cur.tasks.map(t => t.id === id ? { ...t, status: "completed" } : t);
-    saveDB(cur); refresh();
-    toast.success("Task completed");
+  const complete = async (id) => {
+    try {
+      await updateTask(id, {
+        status: "completed",
+      });
+
+      fetchTasks();
+
+      toast.success("Task completed");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed");
+    }
   };
-  const setStatus = (id, status) => {
-    const cur = getDB();
-    cur.tasks = cur.tasks.map(t => t.id === id ? { ...t, status } : t);
-    saveDB(cur); refresh();
+  const setStatus = async (id, status) => {
+    try {
+      await updateTask(id, {
+        status,
+      });
+
+      fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -66,10 +133,10 @@ export default function Tasks() {
 
       <div className="grid gap-3">
         {visible.map(t => (
-          <Card key={t.id} className="p-5 card-hover" dataataid={`task-item-${t.id}`}>
+          <Card key={t._id} className="p-5 card-hover" data-testid={`task-item-${t._id}`}>
             <div className="flex items-start gap-4">
-              <button onClick={() => complete(t.id)} className={`shrink-0 h-6 w-6 rounded-full border-2 flex items-center justify-center transition ${t.status === "completed" ? "bg-emerald-500 border-emerald-500" : "border-zinc-600 hover:border-emerald-500"}`}
-                data-testid={`task-complete-${t.id}`}>
+              <button onClick={() => complete(t._id)} className={`shrink-0 h-6 w-6 rounded-full border-2 flex items-center justify-center transition ${t.status === "completed" ? "bg-emerald-500 border-emerald-500" : "border-zinc-600 hover:border-emerald-500"}`}
+                data-testid={`task-complete-${t._id}`}>
                 {t.status === "completed" && <CheckCircle2 className="h-4 w-4 text-black" />}
               </button>
               <div className="flex-1 min-w-0">
@@ -86,16 +153,17 @@ export default function Tasks() {
                 <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
                   <div className="flex gap-4">
                     <span>Due: {t.dueDate}</span>
-                    <span>Assignee: {db.users.find(u => u.id === t.assignedTo)?.name || "—"}</span>
+                    <span>
+                      Assignee: {t.assignedTo?.fullName || t.assignedTo?.name || "—"}
+                    </span>
                   </div>
                   {t.status !== "completed" && (
-                    <Select value={t.status} onValueChange={(v) => setStatus(t.id, v)}>
+                    <Select value={t.status} onValueChange={(v) => setStatus(t._id, v)}>
                       <SelectTrigger className="h-7 w-32 bg-transparent border-white/10 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#121214] border-white/10 text-white">
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -118,7 +186,7 @@ export default function Tasks() {
               <div><Label className="text-zinc-400 text-xs">Priority</Label>
                 <Select value={form.priority} onValueChange={v => setForm({ ...form, priority: v })}>
                   <SelectTrigger className="bg-zinc-900 border-zinc-800 mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[#121214] border-white/10 text-white"><SelectItem value="high">High</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="low">Low</SelectItem></SelectContent>
+                  <SelectContent className="bg-[#121214] border-white/10 text-white"><SelectItem value="High">High</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Low">Low</SelectItem></SelectContent>
                 </Select>
               </div>
             </div>
@@ -126,7 +194,7 @@ export default function Tasks() {
               <Select value={form.assignedTo} onValueChange={v => setForm({ ...form, assignedTo: v })}>
                 <SelectTrigger className="bg-zinc-900 border-zinc-800 mt-1"><SelectValue placeholder="Select user" /></SelectTrigger>
                 <SelectContent className="bg-[#121214] border-white/10 text-white">
-                  {canAssign ? db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>) : <SelectItem value={user.id}>{user.name}</SelectItem>}
+                  {canAssign ? users.map(u => <SelectItem key={u._id} value={u._id}>{u.fullName}</SelectItem>) : <SelectItem value={user.id}>{user.name}</SelectItem>}
                 </SelectContent>
               </Select>
             </div>

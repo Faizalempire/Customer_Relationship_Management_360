@@ -46,11 +46,12 @@ const registerUser = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("REGISTER ERROR:", error);
 
         res.status(500).json({
             success: false,
-            message: "Server Error",
+            message: error.message,
+            error: error.stack,
         });
     }
 };
@@ -59,7 +60,9 @@ const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Check fields
+        console.log("Email received:", email);
+        console.log("Password received:", password);
+
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -67,8 +70,9 @@ const loginUser = async (req, res) => {
             });
         }
 
-        // Find user
         const user = await User.findOne({ email });
+
+        console.log("User found:", user);
 
         if (!user) {
             return res.status(404).json({
@@ -77,8 +81,9 @@ const loginUser = async (req, res) => {
             });
         }
 
-        // Compare password
         const isMatch = await bcrypt.compare(password, user.password);
+
+        console.log("Password Match:", isMatch);
 
         if (!isMatch) {
             return res.status(401).json({
@@ -87,7 +92,6 @@ const loginUser = async (req, res) => {
             });
         }
 
-        // Generate JWT
         const token = jwt.sign(
             {
                 id: user._id,
@@ -99,7 +103,6 @@ const loginUser = async (req, res) => {
             }
         );
 
-        // Remove password from response
         const { password: _, ...userData } = user.toObject();
 
         res.status(200).json({
@@ -118,35 +121,34 @@ const loginUser = async (req, res) => {
         });
     }
 };
-
 const getProfile = async (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Protected Route Accessed Successfully",
-    user: req.user,
-  });
+    res.status(200).json({
+        success: true,
+        message: "Protected Route Accessed Successfully",
+        user: req.user,
+    });
 };
 
 
 const adminDashboard = (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Welcome Admin!",
-  });
+    res.status(200).json({
+        success: true,
+        message: "Welcome Admin!",
+    });
 };
 
 const managerDashboard = (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Welcome Sales Manager!",
-  });
+    res.status(200).json({
+        success: true,
+        message: "Welcome Sales Manager!",
+    });
 };
 
 const employeeDashboard = (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Welcome Sales Executive!",
-  });
+    res.status(200).json({
+        success: true,
+        message: "Welcome Sales Executive!",
+    });
 };
 
 

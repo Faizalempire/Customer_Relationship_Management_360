@@ -41,13 +41,13 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="leads" element={<Leads />} />
             <Route path="customers" element={<Customers />} />
-            <Route path="pipeline" element={<Protected allow={["admin","manager"]}><Pipeline /></Protected>} />
+            <Route path="pipeline" element={<Protected allow={["admin","sales_manager"]}><Pipeline /></Protected>} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="followups" element={<FollowUps />} />
             <Route path="calendar" element={<Protected allow={["admin"]}><CalendarPage /></Protected>} />
-            <Route path="team" element={<Protected allow={["admin","manager"]}><Team /></Protected>} />
+            <Route path="team" element={<Protected allow={["admin","sales_manager"]}><Team /></Protected>} />
             <Route path="users" element={<Protected allow={["admin"]}><UserManagement /></Protected>} />
-            <Route path="reports" element={<Protected allow={["admin","manager"]}><Reports /></Protected>} />
+            <Route path="reports" element={<Protected allow={["admin","sales_manager"]}><Reports /></Protected>} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="activity" element={<Protected allow={["admin"]}><ActivityLogs /></Protected>} />
             <Route path="settings" element={<Protected allow={["admin"]}><Settings /></Protected>} />

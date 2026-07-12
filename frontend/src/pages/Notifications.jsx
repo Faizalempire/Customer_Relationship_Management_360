@@ -1,5 +1,9 @@
-import React, { useState } from "react";
-import { getDB, saveDB } from "../lib/mockData";
+import React, { useState, useEffect } from "react";
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../api/notificationApi";
 import { useAuth } from "../lib/auth";
 import { SectionTitle, Card } from "../components/UIKit";
 import { Bell, CheckCheck, Target, AlertTriangle, User } from "lucide-react";
@@ -15,20 +19,48 @@ const iconFor = (t) => {
 
 export default function Notifications() {
   const { user } = useAuth();
-  const [db, setDB] = useState(getDB());
-  const refresh = () => setDB({ ...getDB() });
+  const [notifications, setNotifications] = useState([]);
 
-  const mine = db.notifications.filter(n => n.userId === user.id).sort((a, b) => new Date(b.created) - new Date(a.created));
-
-  const markAll = () => {
-    const cur = getDB();
-    cur.notifications = cur.notifications.map(n => n.userId === user.id ? { ...n, read: true } : n);
-    saveDB(cur); refresh();
+  const fetchNotifications = async () => {
+    try {
+      const data = await getNotifications();
+      setNotifications(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
-  const markRead = (id) => {
-    const cur = getDB();
-    cur.notifications = cur.notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    saveDB(cur); refresh();
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const mine = notifications
+    .filter((n) =>
+      user.role === "sales_executive"
+        ? (n.userId?._id || n.userId) === (user._id || user.id)
+        : true
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt || b.created) -
+        new Date(a.createdAt || a.created)
+    );
+
+  const markAll = async () => {
+    try {
+      await markAllNotificationsRead();
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const markRead = async (id) => {
+    try {
+      await markNotificationRead(id);
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -51,7 +83,7 @@ export default function Notifications() {
                   {!n.read && <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-2" />}
                 </div>
                 <div className="text-sm text-zinc-500 mt-1">{n.message}</div>
-                <div className="text-xs text-zinc-600 mt-2">{new Date(n.created).toLocaleString()}</div>
+                <div className="text-xs text-zinc-600 mt-2">{new Date(n.createdAt || n.created).toLocaleString()}</div>
               </div>
             </Card>
           );

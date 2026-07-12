@@ -5,32 +5,84 @@ import { KpiCard, Card, StatusPill, SectionTitle, currency } from "../components
 import { Users, Target, DollarSign, TrendingUp, CheckSquare, Clock, Repeat, Trophy } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { motion } from "framer-motion";
+import { getDashboardStats } from "../api/dashboardApi";
 
 const chartTheme = { stroke: "#3f3f46", tick: "#71717a" };
 
 export default function Dashboard() {
   const { user } = useAuth();
   const db = getDB();
+
+  const [stats, setStats] = React.useState({
+    totalCustomers: 0,
+    totalLeads: 0,
+    activeLeads: 0,
+    wonDeals: 0,
+    lostDeals: 0,
+    revenue: 0,
+
+    totalUsers: 0,
+    admins: 0,
+    salesManagers: 0,
+    salesExecutives: 0,
+
+    totalTasks: 0,
+    completedTasks: 0,
+    pendingTasks: 0,
+    inProgressTasks: 0,
+
+    leadStageData: [],
+    recentCustomers: [],
+    recentLeads: [],
+    recentTasks: [],
+  });
+
+  React.useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const data = await getDashboardStats();
+        setStats(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadDashboard();
+  }, []);
   if (!user) return null;
 
-  if (user.role === "admin") return <AdminDashboard db={db} />;
-  if (user.role === "manager") return <ManagerDashboard db={db} user={user} />;
+  if (user.role === "admin") return <AdminDashboard db={db} stats={stats} />;
+  if (user.role === "sales_manager") return <ManagerDashboard db={db} user={user} />;
   return <ExecutiveDashboard db={db} user={user} />;
 }
 
-function AdminDashboard({ db }) {
+function AdminDashboard({ db, stats
+
+}) {
   const totalRev = db.leads.filter(l => l.stage === "Won").reduce((s, l) => s + l.value, 0);
   const pipelineVal = db.leads.filter(l => !["Won", "Lost"].includes(l.stage)).reduce((s, l) => s + l.value, 0);
   const conv = Math.round((db.leads.filter(l => l.stage === "Won").length / db.leads.length) * 100);
 
-  const stageData = db.stages.map(s => ({ name: s, count: db.leads.filter(l => l.stage === s).length }));
+  const stageData = stats.leadStageData.map(stage => ({
+    name: stage._id,
+    count: stage.count,
+  }));
   const revenueByMonth = [
     { m: "Sep", rev: 4.2 }, { m: "Oct", rev: 5.8 }, { m: "Nov", rev: 6.1 }, { m: "Dec", rev: 7.4 }, { m: "Jan", rev: 8.9 }, { m: "Feb", rev: 9.6 },
   ];
   const roleData = [
-    { name: "Admin", value: db.users.filter(u => u.role === "admin").length },
-    { name: "Manager", value: db.users.filter(u => u.role === "manager").length },
-    { name: "Executive", value: db.users.filter(u => u.role === "executive").length },
+    {
+      name: "Admin",
+      value: stats.admins,
+    },
+    {
+      name: "Sales Manager",
+      value: stats.salesManagers,
+    },
+    {
+      name: "Sales Executive",
+      value: stats.salesExecutives,
+    },
   ];
   const COLORS = ["#10B981", "#3B82F6", "#F59E0B"];
 
@@ -38,10 +90,22 @@ function AdminDashboard({ db }) {
     <div data-testid="admin-dashboard">
       <SectionTitle eyebrow="Command room" title="Admin Overview" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KpiCard label="Total Users" value={db.users.length} delta="+2 this month" icon={Users} testid="kpi-users" />
-        <KpiCard label="Revenue Won" value={currency(totalRev)} delta="+18% MoM" icon={DollarSign} testid="kpi-revenue" />
-        <KpiCard label="Pipeline Value" value={currency(pipelineVal)} delta="+12% MoM" icon={TrendingUp} testid="kpi-pipeline" />
-        <KpiCard label="Conversion" value={`${conv}%`} delta="+4.2%" icon={Trophy} testid="kpi-conversion" />
+        <KpiCard
+          label="Customers"
+          value={stats.totalCustomers} delta="+2 this month" icon={Users} testid="kpi-users" />
+        <KpiCard
+          label="Revenue Won"
+          value={currency(stats.revenue)} delta="+18% MoM" icon={DollarSign} testid="kpi-revenue" />
+        <KpiCard
+          label="Active Leads"
+          value={stats.activeLeads} delta="+12% MoM" icon={TrendingUp} testid="kpi-pipeline" />
+        <KpiCard
+          label="Won Deals"
+          value={stats.wonDeals}
+          delta={`${stats.lostDeals} Lost`}
+          icon={Trophy}
+          testid="kpi-conversion"
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4 mb-8">
@@ -99,18 +163,79 @@ function AdminDashboard({ db }) {
         <Card className="p-6">
           <h3 className="font-display font-semibold mb-6">Recent activity</h3>
           <div className="space-y-3">
-            {db.activity.slice(0, 6).map((a, i) => (
-              <motion.div key={a.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5">
-                <div className="h-8 w-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-semibold shrink-0">
-                  {db.users.find(u => u.id === a.userId)?.avatar || "??"}
+
+            {stats.recentCustomers?.map((customer, i) => (
+              <motion.div
+                key={`customer-${customer._id}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5"
+              >
+                <div className="h-8 w-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-semibold">
+                  C
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-zinc-200 truncate">{a.description}</div>
-                  <div className="text-[10px] text-zinc-500 mt-0.5">{new Date(a.timestamp).toLocaleString()}</div>
+
+                <div className="flex-1">
+                  <div className="text-sm text-zinc-200">
+                    Customer <strong>{customer.customerName}</strong> created
+                  </div>
+
+                  <div className="text-[10px] text-zinc-500">
+                    {new Date(customer.createdAt).toLocaleString()}
+                  </div>
                 </div>
               </motion.div>
             ))}
+
+            {stats.recentLeads?.map((lead, i) => (
+              <motion.div
+                key={`lead-${lead._id}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5"
+              >
+                <div className="h-8 w-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-semibold">
+                  L
+                </div>
+
+                <div className="flex-1">
+                  <div className="text-sm text-zinc-200">
+                    Lead <strong>{lead.name}</strong> added
+                  </div>
+
+                  <div className="text-[10px] text-zinc-500">
+                    {new Date(lead.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {stats.recentTasks?.map((task, i) => (
+              <motion.div
+                key={`task-${task._id}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5"
+              >
+                <div className="h-8 w-8 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 text-xs font-semibold">
+                  T
+                </div>
+
+                <div className="flex-1">
+                  <div className="text-sm text-zinc-200">
+                    Task <strong>{task.title}</strong> created
+                  </div>
+
+                  <div className="text-[10px] text-zinc-500">
+                    {new Date(task.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
           </div>
         </Card>
       </div>
@@ -123,7 +248,7 @@ function ManagerDashboard({ db, user }) {
   const won = teamLeads.filter(l => l.stage === "Won");
   const pipelineVal = teamLeads.filter(l => !["Won", "Lost"].includes(l.stage)).reduce((s, l) => s + l.value, 0);
   const overdueTasks = db.tasks.filter(t => t.status === "overdue").length;
-  const execs = db.users.filter(u => u.role === "executive");
+  const execs = db.users.filter(u => u.role === "sales_executive");
 
   const execPerf = execs.map(e => ({
     name: e.name.split(" ")[0],

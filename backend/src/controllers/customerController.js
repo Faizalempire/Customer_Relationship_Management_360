@@ -1,4 +1,5 @@
 const Customer = require("../models/Customer");
+const createNotification = require("../utils/createNotification");
 
 // Create Customer
 const createCustomer = async (req, res) => {
@@ -10,7 +11,7 @@ const createCustomer = async (req, res) => {
             company,
             status,
             assignedTo,
-            
+
         } = req.body;
 
         // Required fields validation
@@ -45,10 +46,18 @@ const createCustomer = async (req, res) => {
                 {
                     action: "Customer Created",
                     performedBy: req.user.id,
-                    
+
                 },
             ],
         });
+        if (customer.assignedTo) {
+            await createNotification({
+                title: "New Customer Added",
+                message: `Customer "${customer.customerName}" has been created.`,
+                type: "user",
+                userId: customer.assignedTo,
+            });
+        }
 
         res.status(201).json({
             success: true,
@@ -241,44 +250,44 @@ const deleteCustomer = async (req, res) => {
 
 // Assign Customer to Sales Executive
 const assignCustomer = async (req, res) => {
-  try {
-    const customer = await Customer.findById(req.params.id);
+    try {
+        const customer = await Customer.findById(req.params.id);
 
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found.",
-      });
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: "Customer not found.",
+            });
+        }
+
+        customer.assignedTo = req.body.assignedTo;
+
+        customer.activityHistory.push({
+            action: "Customer Assigned",
+            performedBy: req.user.id,
+            assignedTo: req.body.assignedTo,
+        });
+
+        await customer.save();
+
+        const updatedCustomer = await Customer.findById(req.params.id)
+            .populate("createdBy", "fullName email role")
+            .populate("assignedTo", "fullName email role");
+
+        res.status(200).json({
+            success: true,
+            message: "Customer assigned successfully.",
+            customer: updatedCustomer,
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
     }
-
-    customer.assignedTo = req.body.assignedTo;
-
-    customer.activityHistory.push({
-      action: "Customer Assigned",
-      performedBy: req.user.id,
-      assignedTo: req.body.assignedTo,
-    });
-
-    await customer.save();
-
-    const updatedCustomer = await Customer.findById(req.params.id)
-      .populate("createdBy", "fullName email role")
-      .populate("assignedTo", "fullName email role");
-
-    res.status(200).json({
-      success: true,
-      message: "Customer assigned successfully.",
-      customer: updatedCustomer,
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
 };
 
 
@@ -319,4 +328,4 @@ module.exports = {
     assignCustomer,
     getCustomerHistory,
 };
-    
+

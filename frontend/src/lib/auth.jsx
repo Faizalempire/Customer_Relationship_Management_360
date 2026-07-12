@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { getDB, saveDB, generateId } from "./mockData";
+import socket from "../services/socket";
+import API from "../api/axios";
 
 const AuthCtx = createContext(null);
 const SESSION_KEY = "crm360_session_v1";
@@ -12,7 +14,7 @@ export function AuthProvider({ children }) {
     getDB(); // ensure seeded
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
-      try { setUser(JSON.parse(raw)); } catch {}
+      try { setUser(JSON.parse(raw)); } catch { }
     }
     // Apply saved accent color
     const savedAccent = localStorage.getItem("crm360_accent");
@@ -34,44 +36,100 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = (email, password) => {
-    const db = getDB();
-    const found = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-    if (!found) return { ok: false, error: "Invalid email or password" };
-    if (found.status !== "active") return { ok: false, error: "Account inactive. Contact admin." };
-    const session = { id: found.id, name: found.name, email: found.email, role: found.role, avatar: found.avatar };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    setUser(session);
-    return { ok: true, user: session };
-  };
+  const login = async (email, password) => {
+    try {
+      const res = await API.post("/auth/login", {
+        email,
+        password,
+      });
 
-  const signup = ({ name, email, password, role }) => {
-    const db = getDB();
-    if (db.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-      return { ok: false, error: "Email already registered" };
+      const { token, user } = res.data;
+
+      localStorage.setItem("token", token);
+
+      const session = {
+        id: user._id,
+        name: user.fullName,
+        email: user.email,
+        role: user.role,
+      };
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+      setUser(session);
+      socket.connect();
+
+      socket.emit(
+        "join",
+        session.id
+      );
+
+      return {
+        ok: true,
+        user: session,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err.response?.data?.message || "Login failed",
+      };
     }
-    const newUser = {
-      id: generateId("u"),
-      name,
-      email,
-      password,
-      role,
-      avatar: name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase(),
-      status: "active",
-      phone: "",
-      joined: new Date().toISOString().slice(0, 10),
-    };
-    db.users.push(newUser);
-    saveDB(db);
-    const session = { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, avatar: newUser.avatar };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    setUser(session);
-    return { ok: true, user: session };
   };
 
+  const signup = async ({ name, email, password, role }) => {
+    try {
+
+      const roleMap = {
+        admin: "admin",
+        sales_manager: "sales_manager",
+        sales_executive: "sales_executive",
+      };
+
+      const res = await API.post("/auth/register", {
+        fullName: name,
+        email,
+        password,
+        role: roleMap[role],
+      });
+
+      const user = res.data.user;
+
+      const session = {
+        id: user._id,
+        name: user.fullName,
+        email: user.email,
+        role: user.role,
+      };
+
+      setUser(session);
+      socket.connect();
+
+      socket.emit(
+        "join",
+        session.id
+      );
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+      return {
+        ok: true,
+        user: session,
+      };
+
+    } catch (err) {
+      return {
+        ok: false,
+        error: err.response?.data?.message || "Registration Failed",
+      };
+    }
+  };
   const logout = () => {
+
+    socket.disconnect();
+
     localStorage.removeItem(SESSION_KEY);
+
     setUser(null);
+
   };
 
   const updateProfile = (updates) => {
