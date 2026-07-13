@@ -363,3 +363,112 @@ Backend Setup***
 
 ##### ***git push origin main***
 
+✨ Features
+🔐 JWT Authentication & Authorization
+👥 Role-Based Access Control (Admin, Sales Manager, Sales Executive)
+📊 Interactive Dashboard with CRM Analytics
+👤 Customer Management
+🎯 Lead Management
+✅ Task Management
+📅 Follow-up Scheduling
+🔔 User Notification System
+📈 Activity Tracking
+🔍 Search, Filtering & Sorting
+📱 Responsive Modern UI
+☁️ MongoDB Atlas Integration
+🔒 Protected REST APIs
+🛠 Tech Stack
+Frontend
+React.js
+React Router
+Axios
+Tailwind CSS
+ShadCN UI
+Lucide React Icons
+Recharts
+Backend
+Node.js
+Express.js
+MongoDB Atlas
+Mongoose
+JWT Authentication
+Bcrypt.js
+Database
+MongoDB Atlas
+Tools
+Git & GitHub
+Postman / Thunder Client
+VS Code
+👥 User Roles
+👑 Administrator
+Manage users
+Create and assign leads
+Manage customers
+Assign tasks
+Schedule follow-ups
+View analytics and reports
+Monitor notifications
+📊 Sales Manager
+Manage assigned teams
+Track sales performance
+Assign customers and tasks
+Monitor follow-ups
+View reports
+💼 Sales Executive
+Manage assigned leads
+Update customer details
+Complete assigned tasks
+Schedule and manage follow-ups
+Receive notifications
+🔔 Notification System
+
+CRM360 includes an integrated notification system that automatically generates notifications when:
+
+A new Lead is assigned
+A Customer is assigned
+A Task is assigned
+A Follow-up is scheduled
+
+Notifications are stored in MongoDB and displayed to the assigned user through the Notifications module.
+
+📂 Project Structure
+CRM360/
+│
+├── frontend/
+│   ├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── api/
+│   └── assets/
+│
+├── backend/
+│   ├── src/
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── middleware/
+│   ├── utils/
+│   └── config/
+│
+└── README.md
+🚀 Key Highlights
+Complete Full Stack CRM Application
+Secure JWT Authentication
+Role-Based Authorization
+RESTful API Architecture
+MongoDB Atlas Cloud Database
+Modern Responsive Dashboard
+Notification Management System
+Customer & Lead Lifecycle Management
+Task & Follow-up Tracking
+Scalable Project Structure
+📌 Future Enhancements
+Real-time notifications using Socket.IO
+Email notification integration
+File and document management
+Sales forecasting dashboard
+Calendar synchronization
+Report export (PDF/Excel)
+Advanced analytics
+Audit logs
+Multi-organization support
